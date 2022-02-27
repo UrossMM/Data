@@ -1,0 +1,166 @@
+
+db.createCollection("students")
+db.students.drop()
+
+//dokumenti u kolekciji mogu imati razlicite atribute
+
+//mongo automatski dodaje _id 
+db.students.insertOne({name: "Jack", major: "Biology", gpa: 3.5})  //parametar je objekat
+
+//ako mi dodamo _id onda ce on imati tu vrednost koju mu mi postavimo
+db.students.insertOne({_id: 2, name: "Claire", major: "Marketing", gpa: 3.7, awards: ["Valedictorian", "Summa cum laude"]})
+
+db.students.insertOne({name: "Kate", major: "Sociology", gpa: 3.2, contact: {phone: "3333", email: "student@school.com"}})
+
+db.students.insertMany(
+[
+	{name: "Mike", major: "Computer science", gpa: 3.5},
+	{name: "Andrea", major: "Math", gpa: 4.0}
+]) //parametar je niz objekata
+
+---------------------------FIND //prvi blok su filteri a drugi blok su stvari koje hocemo ili necemo da vratimo
+
+db.students.find({})
+
+//ako hocemo da vratimo bez nekog polja pisemo ovako:
+db.students.find({}, {_id: 0}) //vratice objekte bez _id
+
+//ako hocemo da vratimo samo prva npr 3: 
+db.students.find({},{_id: 0}).limit(3)
+
+//sortirace ono sto vrati po imenu u rastucem redosledu
+db.students.find({}, {_id:0}).sort({name: 1})
+
+//sortirace ono sto vrati po imenu u opadajucem redosledu a zatim ako ima onih koji imaju isti gpa onda njih po imenu u rastucem
+db.students.find({}, {_id:0}).sort({gpa:-1, name: 1})
+
+//vrati sve one kojima je major Biology bez prikazivanja _id
+db.students.find({major: "Biology"}, {_id: 0})
+
+//vrati sve one kojima je major Biology i name Jack bez prikazivanja _id
+db.students.find({major: "Biology", name: "Jack"}, {_id: 0})
+
+//sve studente koji su major Chemistry ILI im je name Jack
+db.students.find(
+{$or: 
+	[ // svaku OR stavku stavljamo u ovom nizu kao objekat 
+		{major: "Chemistry"}, 
+		{name: "Jack"}
+	]}, 
+{_id: 0})
+
+//studente kod kojih je gpa veci od 3.5
+db.students.find(
+{gpa: 
+	{$gt: 3.5}
+}, 
+{_id:0})
+
+
+//studente kojima je gpa manji jednak 3.2
+db.students.find(
+{gpa:
+	{$lte: 3.2}
+},
+{_id:0}).sort({gpa: -1})
+
+// $eq, $ne, $lt, $lte, $gt, $gte ovo su ostali koji postoje
+
+
+//vrati studente cija su imena Kate ili Claire
+db.students.find({name: {$in: ["Kate", "Claire"]}},{_id: 0})    //postoji i $nin koji znaci cija imena nisu Kate ili Claire
+
+//vraca sve one koji imaju polje awards
+db.students.find({awards: {$exists: true}}, {_id:0})
+
+//vraca sve one kojima je name zapamcen kao tip string (jer ne mora svaki dokument da ima name koji je string)
+db.students.find({name: {$type: 2}}, {_id:0}) //2 je oznaka za string, ovde ima za sve tipove: docs.mongodb.com/manual/reference/bson-types
+
+//vraca one kod kojih je prva vrednost u nizu za grades 90
+db.students.find({"grades.0": 90}, {_id: 0})
+
+
+//vraca one koji u svom nizu grades imaju element veci od 80
+db.students.find({grades: {$elemMatch: {$gte: 80}}}, {_id: 0})
+
+---------------------UPDATE // prvi blok oznacava uslov tj filter, a drugi blok oznacava nove vrednosti koje postavljamo
+
+//samo jednom studentu koji isunjava uslov da mu je major Biology postavi major na Bio
+db.students.updateOne(
+	{major: "Biology"},       
+	{
+		$set:
+			{major: "Bio"}    
+	}
+)
+
+//svima koji ispunjavaju uslov da im je major Biology postavi major na Bio
+db.students.updateMany(
+	{major: "Biology"},      
+	{
+		$set:
+			{major: "Bio"}    
+	}
+)
+
+--------------------------REPLACE
+//zamenice jednog cije je major Biology na nove vrednosti
+db.students.replaceOne(
+	{major: "Biology"},
+	{name: "new name", major: "new major", gpa: 4.0}
+)
+
+-------------------------DELETE u bloku pisemo uslov po kom prepoznajemo one koje brisemo
+//obrisace sve ciji je gpa veci jednak 3.5
+db.students.deleteMany({gpa: {$gte: 3.5}})
+
+//obrisace jednog 
+db.students.deleteOne({gpa: {$gte: 3.5}})
+
+
+----------------------------------------------------TEXT INDEXING
+db.stores.createIndex( {name: "text", description: "text"} )
+db.stores.find({ $text: { $search: "Coffee"}})
+=>objasnjenje: mi smo napravili index nad name i description i dodelili im text 
+// kada u find posle napisemo $text onda pretrazujemo sve objekte po name i description, $search je ugradjena stavka
+i tu kazemo sta pretrazujemo
+
+db.stores.find(
+	{$text: { $search: "Java Hut Coffee"}},
+	{ score: { $meta: "textScore"}}
+).sort( {score: {$meta: "textScore"}})
+=> objasnjenje: Kada vrati rezultat vraca score (float vrednost) koji rankira povratne rezultate po relevantnosti,
+//koliko je rec koju trazimo relevantna u svakom od povratnih rezultata
+
+---------------------------------------------------AGGREGATION
+db.purchase_orders.insertMany(
+[
+	{product: "toothbrush", total: 4.75, customer:"Mike"},
+	{product: "guitar", total: 199.99, customer:"Tom"},
+	{product: "milk", total: 11.33, customer:"Mike"},
+	{product: "pizza", total: 8.50, customer:"Karen"},
+	{product: "toothbrush", total: 4.75, customer:"Karen"},
+	{product: "pizza", total: 4.75, customer:"Dave"},
+	{product: "toothbrush", total: 4.75, customer:"Mike"},
+])
+
+//broj toothbrush koje su prodate
+db.purchase_orders.count({product: "toothbrush"})
+
+//razlicite stvari
+db.purchase_orders.distinct("product") //product je atribut, vratice niz razlicitih stringova
+
+//total amount of money spent by each customer
+db.purchase_orders.aggregate(
+	[
+		{$match: {customer: {$in: ["Mike", "Karen", "Dave", "Tom"]}} }, //filter
+		{$group: {_id: "$customer", total: {$sum: "$total"}} }
+		// {$sort: {total: -1}}
+	]
+)
+=> Rezultat:
+{"_id" : "Dave", "total" : 4.75}
+{"_id" : "Karen", "total" : 13.25}
+{"_id" : "Tom", "total" : 199.99}
+{"_id" : "Mike", "total" : 20.83}
+

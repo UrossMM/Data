@@ -1,0 +1,205 @@
+CREATE TABLE - kreiranje tabele
+DROP TABLE - brisanje tabele
+ALTER TABLE - dodavanje/brisanje kolona
+
+SELECT                                         
+INSERT INTO - dodavanje redova
+DELETE FROM - brisanje redova
+UPDATE - azuriranje podataka
+TRUNCATE - brisanje podataka
+
+Pravila:
+1. Maksimalna duzina imena kolone je 30 znakova
+2. Ime ne sme da sadrzi upitnik
+3. Nema razlike izmedju malih i velikih slova
+4. Prvi znak mora biti slovo
+5. Dozvoljeni znaci su A-Z, 0-9, _, $ i #
+6. Kao imena ne smeju se koristiti rezervisane reci
+7. Imena se ne smeju ponavljati
+
+CHAR
+**Ukoliko je podatak u koloni kraci od specificirane duzine on se dopunjuje blanko znacima sa desne strane
+**Prilikom poredjenja CHAR vrednosti uzimaju se u obzir i dodati blanko znaci
+VARCHAR
+**U koloni se pamti podatak bez dopunjivanja blanko znacima
+
+**Standardni format za pamcenje datuma je dd-mmm-yyyy : 13-NOV-92
+**Standardni format za pamcenje vremena je hh:mm:ss : 11:12:32
+
+**Kada kazemo PRIMARY KEY automatski se za tu kolonu podazumeva da je UNIQUE i NOT NULL
+**Ako ORDER BY nije navedena vrste u rezultujucoj tabeli ce biti organizovane u slucajnom redosledu, a ako je navedena ali
+nije navedeno ni ASC ni DSC bice po defaultu ASC
+
+DROP TABLE <ime tabele> [CASCADE CONSTRAINTS] 
+CASCADE CONSTRAINTS- brisu se sva ogranicenja koja referenciraju tabelu koja se brise 
+DROP TABLE PROJEKAT CASCADE CONSTRAINTS //ako se jave referenciranja ka tabeli PROJEKAT prvo ce ta ogranicenja biti obrisana, a zatim ce biti obrisana i tabela projekat 
+
+ALTER TABLE<ime tabele>
+	ADD <definicija atributa>
+	ADD <definicija ogranicenja>
+	DROP <ime atributa>
+	DROP CONSTRAINT <ime ogranicenja>
+	MODIFY <definicija atributa>
+	DROP PRIMARY KEY
+	DROP UNIQUE <ime atributa>
+
+Pr: 
+	ALTER TABLE PROBA ADD PRIMARY KEY(X);
+	ALTER TABLE PROBA MODIFY (W VARCHAR(2) DEFAULT 'AM' CONSTRAINT Wnotnull NOT NULL); //Wnotnull je ime ogranicenja
+	ALTER TABLE PROBA DROP PRIMARY KEY;
+	ALTER TABLE PROBA DROP COLUMN Z;
+	
+
+Operatori:
+=
+<>
+<
+>
+<=
+>=
+
+AND
+OR
+NOT (pise se pre izraza)
+
+IN (resava visestruku upotrebu operatora OR)
+LIKE
+BETWEEN (ukljucuje i granice opsega)
+IS NULL
+
+Pr: SELECT * FROM RADNIK WHERE matbrs IS NULL;
+Pr: SELECT * FROM RADNIK WHERE NOT matbrs IS NULL;
+Pr: SELECT * FROM RADNIK WHERE Plata BETWEEN 30000 AND 40000;
+Pr: SELECT * FROM RADNIK WHERE PREZIME 'Pe%\_%' ESCAPE '\';  // \_ znaci da se _ sada ne tretira kao jedan bilo koji karakter nego konkretno kao donja crta, npr. Petrov_ic
+
++, -, *, /
+ROUND(broj[,d])
+POWER(broj,e)
+TRUNC(broj[,d])
+ABS(broj)
+SIGN(broj)
+MOD(broj1, broj2)
+SQRT(broj)
+LEAST(izraz,...)
+GREATEST(izraz,...)
+
+Pr: plate radnika uvecane za bonus od 5000
+SELECT lime, prezime, plata + 5000 AS PLATA_SA_BONUSOM FROM RADNIK; //plate su prikazane uvecane, a ne i promenjene u bazi
+SELECT lime, prezime, plata + 5000 AS PLATA_SA_BONUSOM FROM RADNIK WHERE plata + 5000 > 40000;
+
+**Kad hocemo da prikazemo i neke dodatne kolone mozemo da ih dodamo sami:
+SELECT LIME, PREZIME, PLATA + 5000 AS PLATA_SA_BONUSOM, 1 AS KONSTANTA, NULL NOVA_KOLONA FROM RADNIK;
+//dodali smo kolonu KONSTANTA i NOVA_KOLONA koje kod svakog radnika imaju vrednost 1 i NULL respektivno
+// AS moze da se stavi, a i ne mora 
+
+SELECT LIME, PREZIME, ROUND(PLATA/(22*8),2) ZARADA_SAT FROM RADNIK;
+
+string1 || string2 //konkatenacija stringova
+LENGTH(string) //duzina stringa
+SUBSTR(s,i,j) // podniz od s duzine j od pozicije i
+INSTR(s1,s2,[,k]) //trazi s2 u s1 od pozicije k
+UPPER(s) //prevodi s u velika slova
+LOWER(s) //prevodi s u mala sloba
+TO_NUM(s) //prevodi u numericki tip
+TO_CHAR(n) //prevodi numericki u znakovni
+LPAD(s,l[,c]) //popunjava s sa leve strane sa l znakova c
+RPAD(s,l[,c]) //popunjava s sa desne strane sa l znakova c
+NVL(s1,s2) //ako vazi s1 IS NULL vraca s2. U suprotnom vraca s1
+
+SELECT LIME, PREZIME, NVL(TO_CHAR(MATBRS), 'NEMA SEFA') SEF FROM RADNIK;
+SELECT LIME || '' || SSLOVO || '.' || PREZIME || AS PUNO_IME FROM RADNIK;
+
+SLEDECE FJE SE NE MOGU KORISTITI U WHERE DELU:
+AVG(kolona)
+SUM(kolona)
+MIN(kolona)
+MAX(kolona)
+COUNT(*)
+COUNT(kolona) //broj vrsta sa ne NULL vrednostima
+COUNT(DISTINCT kolona) //broj vrsta sa razlicitim vrednostima kolone
+
+SELECT MAX(PLATA) AS MAX_PLATA, MIN(PLATA) AS MIN_PLATA, AVG(PLATA), SUM(PLATA) FROM RADNIK;
+Rezultat:
+MAX_PLATA		MIN_PLATA		AVG(PLATA)		SUM(PLATA)
+55000			25000			34875			279000
+
+
+--------------------------------
+CREATE TABLE student( 
+	student_id INT,
+	name VARCHAR(20) NOT NULL,
+	major VARCHAR(20) UNIQUE,
+	PRIMARY KEY(student_id)
+);
+
+DROP TABLE student;
+
+ALTER TABLE student ADD gpa DECIMAL(3,2); // dodaje u tabelu student kolonu gpa koja pamti tip decimal
+ALTER TABLE student DROP COLUMN gpa; //brise kolonu gpa iz tabele student 
+
+//u tabelu dodajemo novi red sa vrednostima bas u onom redosledu u kojem smo gore definisali tabelu
+INSERT INTO student VALUES(1, 'Jack', 'Biology'); 
+
+SELECT * FROM student;
+
+//Ne moramo da navedemo sva polja pri upisivanju podataka. Ona koja ne navedemo imace vrednost NULL
+INSERT INTO student(student_id, name) VALUES(3, 'Claire')
+
+Ako stavimo npr ovako: major VARCHAR(20) DEFAULT 'undecided' i izvrsimo INSERT INTO student(student_id, name) VALUES(1, 'Jack')
+=> major ce imati vrednost undecided
+
+Ako stavimo npr ovako: student_id INT AUTO_INCREMENT i izvrsimo INSERT INTO student(name, major) VALUES('Jack', 'Biology')
+pa onda  INSERT INTO student(name, major) VALUES('Kate', 'Sociology')
+=> u tabeli ce se prikazati student_id: 1 za Jack i Biology,  student_id:2 za Kate i Sociology
+
+
+//azuriranje polja major 
+UPDATE student 
+SET major = 'Bio' 
+WHERE major = 'Biology';
+
+//podesavamo jedno polje vecem broju studenata
+UPDATE student
+SET major = 'Biochemistry'
+WHERE major = 'Bio' OR major = 'Chemistry'
+
+//podesavamo vise polja jednom studentu
+UPDATE student
+SET name = 'Tom', major = 'undecided'
+WHERE student_id = '1' 
+
+DELETE FROM student
+WHERE student_id = 5;
+
+DELETE FROM student
+WHERE name = 'Tom' AND major = 'undecided';
+
+// po defaultu je ascending (ASC)
+SELECT student.name, student.major
+FROM student 
+ORDER BY name DESC;
+
+//uredice po major pa ako ima vise njih sa istim major onda ce te iste da uredi po student_id
+SELECT * 
+FROM student
+ORDER BY major, student_id
+
+//vraca samo prva 2
+SELECT  *
+FROM student 
+ORDER BY student_id DESC
+LIMIT 2
+
+// <> ovaj znak znaci nije jednako
+SELECT  *
+FROM student 
+WHERE student_id <= 3 AND name <> 'Jack';
+
+// vratice samo one redove gde je major ili biology ili chemistry i student_id je veci od 2
+SELECT  *
+FROM student 
+WHERE major IN ('Biology', 'Chemistry') AND student_id > 2;
+
+
+
+ 

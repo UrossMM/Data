@@ -1,0 +1,220 @@
+//PRIMARY KEY nikada ne sme da bude NULL
+
+**ON DELETE SET NULL / ON DELETE CASCADE
+**ON UPDATE SET NULL - u slucaju PROMENE podatka u referenciranoj tabeli postavlja null vrednost za strani kljuc
+
+CREATE TABLE employee (
+	emp_id INT PRIMARY KEY,
+	first_name VARCHAR(20),
+	last_name VARCHAR(20),
+	birth_date DATE,
+	sex VARCHAR(1),
+	salary INT,
+	super_id INT,
+	branch_id INT
+);
+
+CREATE TABLE branch (
+	branch_id INT PRIMARY KEY,
+	branch_name VARCHAR(20),
+	mgr_id INT,
+	mgr_start_date DATE
+	FOREIGN KEY(mgr_id) REFERENCES employee(emp_id) ON DELETE SET NULL 
+	//ON DELETE SET NULL znaci da kad se obrise iz tabele employee podatak sa emp_id koji je isti kao i mgr_id 
+	//automatski se u branch za vrednost mgr_id postavlja vrednost NULL
+);
+
+
+ALTER TABLE employee ADD FOREIGN KEY(branch_id) REFERENCES branch(branch_id) ON DELETE SET NULL;
+ALTER TABLE employee ADD FOREGN KEY(super_id) REFERENCES employee(emp_id) ON DELETE SET NULL;
+
+CREATE TABLE client (
+	client_id INT PRIMARY KEY,
+	client_name VARCHAR(20),
+	branch_id INT,
+	FOREGN KEY(branch_id) REFERENCES branch(branch_id) ON DELETE SET NULL 
+);
+
+CREATE TABLE works_with (
+	emp_id INT,
+	client_id INT,
+	total_sales INT,
+	PRIMARY KEY(emp_id, client_id),
+	FOREIGN KEY(emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE,
+	FOREGN KEY(client_id) REFERENCES client(client_id) ON DELETE CASCADE
+	//ON DELETE SET CASCADE znaci da kad se obrise iz tabele employee podatak sa emp_id koji je isti kao i emp_id iz works_with
+	//automatski se u works_with takodje brise ceo red koji ima taj podatak
+);
+
+CREATE TABLE branch_supplier (
+	branch_id INT,
+	supplier_name VARCHAR(40),
+	supply_type VARCHAR(40),
+	PRIMARY KEY(branch_id, supplier_name),
+	FOREGN KEY branch_id REFERENCES branch(branch_id) ON DELETE CASCADE?
+);
+
+INSERT INTO employee VALUES(100, 'David', 'Wallace', '1967-11-17', 'M', 25000, NULL, NULL); //NULL jer branch jos ne postoji
+INSERT INTO branch VALUES(1, 'Corporate', 100, '2006-02-09');
+
+UPDATE employee SET branch_id = 1 WHERE emp_id = 100;
+INSERT INTO employee VALUES(101, 'Jan', 'Levinson', '1961-05-11');
+
+//dodaje i ostale...
+
+//find all employees ordered by sex then name (prvo prikazuje F uredjene po imenima npr prvo Ana pa Bilja, a zatim prikazuje M takodje uredjene od A do Z)
+SELECT * 
+FROM employee
+ORDER BY sex, first_name, last_name;
+
+//vrati forename(first_name) i surname(last_name) svih employees, u ovom slucaju rezultujuce kolone imace imena forename i surname
+SELECT first_name AS forename, last_name AS surname
+FROM employee;
+
+//vraca sve razlicite podatke za sex (nema duplikata)
+SELECT DISTINCT sex
+FROM employee
+
+//broj employee
+SELECT COUNT(emp_id)
+FROM employee;
+
+//how many employee have supervisor , jedan employee u tabeli ima NULL pa njega nece da racuna, racunaju se samo popunjena polja
+SELECT COUNT(super_id)
+FROM employee;
+
+//number of female employees born after 1970
+SELECT COUNT(emp_id)
+FROM employee
+WHERE sex = 'F' AND birth_date > '1970-01-01';
+
+//avarage of all employee's salary
+SELECT AVG(salary)
+FROM employee;
+
+//sum of all salaries
+SELECT SUM(salary) 
+FROM employee;
+
+
+//vratice samo COUNT(sex) 9
+SELECT COUNT(sex)
+FROM employee;
+
+//sledeci upit ce da vrati:   //tome sluzi GROUP BY
+COUNT(sex)   sex
+3			 F
+6			 M
+
+SELECT COUNT(sex), sex
+FROM employee
+GROUP BY sex;
+
+
+//isti emp_id se pojavljuje vise puta u tabeli works_with i hocemo da sve koji imaju isti emp_id da sumiramo njihove total_sales
+SELECT SUM(total_sales), emp_id       //prikazi sumu svih total_sales   i emp_id
+FROM works_with
+GROUP BY emp_id; //ali svi koji imaju isti emp_id prikazi samo jednom i njihovu totalnu sumu
+
+
+//% znaci niz bilo kojih karaktera, a _ znaci samo jedan karakter
+SELECT *
+FROM client
+WHERE client_name LIKE '%LLC'; //svi oni klijenti koji imaju nesto u client_name pa nakon tog LLC
+
+SELECT *
+FROM employee
+WHERE birth_date LIKE '____-10%'; // svu koji su rodjeni oktobra (jer datum je prikazan ovako:yyyy-mm-dd)
+
+
+//sledeci upit vraca u istoj koloni sve first_name iz employee i sve branch_name iz branch
+// Uslov je da u oba upita bude isti broj kolona i da one budu istog tipa
+SELECT first_name 
+FROM employee
+UNION
+SELECT branch_name
+FROM branch;
+
+
+//listu svih clients i branch_suppliers names
+SELECT client_name, client.branch_id
+FROM client
+UNION
+SELECT supplier_name, branch_supplier.branch_id
+FROM branch_supplier;
+
+Rezultat je ovakav:
+client_name   branch_id
+Dunmore		  2
+FedEx 	      3
+=> kolone dobijaju imena po onome sto je u SELECT delu u prvom upitu
+
+//JOIN- ovde ce se prikazati samo oni podaci kod kojih postoji ista vrednost za emp_id i mgr_id
+//sada radimo spoj tabele employee i branch i zato je dozvoljeno da imamo branch.branch_name i dobijamo jednu tabelu
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+JOIN branch
+ON employee.emp_id = branch.mgr_id;  //ovo je ono po cemu ih spajamo
+
+Rezultat:
+emp_id		first_name		branch_name
+100			David			Corporate
+102			Michael			Scranton
+106			Josh			Stamford
+
+//LEFT je ona tabela koja je navedena u FROM delu
+// LEFT JOIN- prikazace se podaci kod kojih postoji ista vrednost za emp_id i mgr_id 
+// I podaci iz prve tabele za koje emp_id nema isti mgr_id u branch tabeli
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+LEFT JOIN branch
+ON employee.emp_id = branch.mgr_id;
+
+Rezultat:
+emp_id		first_name		branch_name
+100			David			Corporate
+102			Michael			Scranton
+106			Josh			Stamford
+101			Jan				NULL
+103			Angela			NULL
+
+//RIGHT JOIN- suprotno od left joina
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+RIGHT JOIN branch
+ON employee.emp_id = branch.mgr_id;
+
+Rezultat:
+emp_id		first_name		branch_name
+100			David			Corporate
+102			Michael			Scranton
+106			Josh			Stamford
+NULL		NULL			NULL  //ovo je podatak koji ima branch tabela a nema ga employee tabela
+
+//NESTED QUERIES
+//imena svih employees koji imaju prodaju vecu od 30000
+//prvo pisemo upit koji izvlaci iz works_with emp_id koji imaju prodaju vecu od 30000
+SELECT works_with.emp_id 
+FROM works_with
+WHERE works_with.total_sales > 30000;
+
+//sada rezultat tog upita treba da iskoristimo u tabeli employee da bismo nasli first_name
+
+SELECT employee.first_name, employee.last_name
+FROM employee
+WHERE employee.emp_id IN (
+	SELECT works_with.emp_id 
+	FROM works_with
+	WHERE works_with.total_sales > 30000;
+);
+ 
+//naci sve klijente koji rukuju granom kojom upravlja michael scot (pretpostaviti da znamo njegov id)
+SELECT client.client_name
+FROM client
+WHERE client.branch_id = (
+SELECT branch.branch_id
+FROM branch
+WHERE branch.mgr_id = 102
+);
+
+ 
